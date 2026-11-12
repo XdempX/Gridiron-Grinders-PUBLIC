@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gridiron Grinders - Pro Edition</title>
+    <style>
+        :root {
+            --bg: #0f172a; --panel: #1e293b; --card: #334155;
+            --text: #f8fafc; --muted: #94a3b8; --border: #475569;
+            --green: #22c55e; --blue: #3b82f6; --red: #ef4444;
+            --gold: #fbbf24; --purple: #a855f7; --orange: #f97316;
+            
+            /* Dynamic Layout Variables */
+            --sidebar-width: 400px;
+            --canvas-max-width: 1200px;
+            --action-max-width: 700px;
+            --header-padding: 15px 30px;
+        }
+
+        /* ULTRAWIDE MODE OVERRIDES */
+        body.ultrawide {
+            --sidebar-width: 450px;
+            --canvas-max-width: 2000px;
+            --action-max-width: 1200px;
+            --header-padding: 20px 50px;
+        }
+
+        body.light {
+            --bg: #f1f5f9; --panel: #ffffff; --card: #e2e8f0;
+            --text: #0f172a; --muted: #64748b; --border: #cbd5e1;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text);
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* BACKGROUND PRESETS */
+        body.bg-midnight { background: #0f172a !important; }
+        body.bg-forest { background: linear-gradient(135deg, #14532d 0%, #0f172a 100%) !important; }
+        body.bg-ocean { background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%) !important; }
+        body.bg-sunset { background: linear-gradient(135deg, #7c2d12 0%, #4c1d95 100%) !important; }
+        body.bg-neon { background: linear-gradient(135deg, #4c1d95 0%, #be185d 100%) !important; }
+        body.bg-steel { background: linear-gradient(135deg, #334155 0%, #0f172a 100%) !important; }
+        body.bg-void { background: #000000 !important; }
+        body.bg-parchment { background: linear-gradient(135deg, #f5f5f4 0%, #d6d3d1 100%) !important; }
+        
+        body.light.bg-forest { background: linear-gradient(135deg, #bbf7d0 0%, #f1f5f9 100%) !important; }
+        body.light.bg-ocean { background: linear-gradient(135deg, #bfdbfe 0%, #f1f5f9 100%) !important; }
+        body.light.bg-sunset { background: linear-gradient(135deg, #fed7aa 0%, #fbcfe8 100%) !important; }
+        body.light.bg-neon { background: linear-gradient(135deg, #e9d5ff 0%, #fecdd3 100%) !important; }
+        body.light.bg-steel { background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%) !important; }
+        body.light.bg-void { background: #ffffff !important; }
+
+        /* ANIMATIONS */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-40px); } }
+        @keyframes screenFlash { 0% { background-color: rgba(239, 68, 68, 0.3); } 100% { background-color: transparent; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes tickerScroll { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+
+        .animate-fade { animation: fadeIn 0.3s ease-out; }
+        .shake { animation: shake 0.3s ease-in-out; }
+
+        /* SCREEN FLASH */
+        #screen-flash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: transparent; pointer-events: none; z-index: 999;
+        }
+        .flash-red { animation: screenFlash 0.5s ease-out; }
+
+        /* TOAST */
+        .toast {
+            position: fixed; bottom: 20px; right: 20px;
+            background: var(--green); color: white;
+            padding: 12px 20px; border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            font-weight: bold; z-index: 2000;
+            animation: slideUp 0.3s ease-out;
+            transition: opacity 0.3s;
+            max-width: 350px;
+        }
+        .toast.hide { opacity: 0; }
+        .toast.warn { background: var(--orange); }
+        .toast.info { background: var(--blue); }
+
+        /* LOGIN SCREEN */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: inherit; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s;
+        }
+        #login-screen.hidden { opacity: 0; visibility: hidden; }
+        
+        .login-card {
+            background: var(--panel); padding: 40px; border-radius: 12px;
+            width: 450px; max-width: 90%; border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            animation: slideUp 0.5s ease-out;
+        }
+        .login-title { text-align: center; font-size: 2rem; margin-bottom: 30px; color: var(--green); font-weight: 900; }
+        .input-group { margin-bottom: 20px; }
+        .input-label { font-size: 0.9rem; color: var(--muted); margin-bottom: 8px; display: block; }
+        .input-field {
+            width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); font-size: 1.1rem; transition: border-color 0.2s;
+        }
+        .input-field:focus { outline: none; border-color: var(--blue); }
+        .btn-primary {
+            width: 100%; padding: 14px; background: var(--blue); color: white;
+            border: none; border-radius: 6px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-primary:active { transform: scale(0.98); }
+        
+        /* SSO BUTTON STYLE */
+        .btn-sso {
+            width: 100%; padding: 14px; background: var(--text); color: var(--bg);
+            border: none; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer;
+            margin-top: 10px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: all 0.2s;
+        }
+        .btn-sso:hover { opacity: 0.9; transform: translateY(-1px); }
+        .sso-icon { font-size: 1.2rem; }
+
+        .btn-secondary {
+            width: 100%; padding: 12px; background: var(--card); color: var(--text);
+            border: 1px solid var(--border); border-radius: 6px; margin-top: 15px; cursor: pointer;
+            transition: transform 0.1s; font-size: 1rem;
+        }
+        .btn-secondary:active { transform: scale(0.98); }
+        
+        .divider {
+            text-align: center; margin: 20px 0; color: var(--muted); font-size: 0.8rem;
+            position: relative;
+        }
+        .divider::before {
+            content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: var(--border); z-index: -1;
+        }
+
+        .existing-profiles { margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px; }
+        .profile-list { max-height: 200px; overflow-y: auto; margin-bottom: 15px; }
+        .profile-item {
+            padding: 12px; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex;
+            justify-content: space-between; align-items: center; transition: all 0.2s;
+        }
+        .profile-item:hover { border-color: var(--blue); background: var(--card); }
+        .profile-item.selected { border-color: var(--green); background: rgba(34, 197, 94, 0.1); }
+        .profile-item.sso-profile { border-left: 4px solid var(--blue); }
+
+        /* GAME UI - HEADER */
+        header {
+            background: var(--panel); 
+            padding: var(--header-padding);
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border-bottom: 2px solid var(--border); z-index: 100;
+            width: 100%;
+        }
+        
+        .logo { 
+            font-size: 1.5rem;
+            font-weight: 900; 
+            color: var(--green); 
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .header-center-stats {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            flex-grow: 1;
+            justify-content: center;
+            overflow-x: auto;
+            padding: 0 30px;
+        }
+
+        .stat-box { 
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 100px;
+        }
+        .stat-label { 
+            font-size: 0.8rem;
+            color: var(--muted); 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .stat-value { 
+            font-size: 1.5rem;
+            font-weight: bold; 
+            font-family: monospace; 
+        }
+        .c-yards { color: var(--green); }
+        .c-yps { color: var(--blue); }
+        .c-mult { color: var(--purple); }
+        .c-coins { color: var(--gold); }
+        
+        .event-timer {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 6px 15px;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            color: var(--orange);
+            font-weight: bold;
+            font-family: monospace;
+            min-width: 100px;
+            text-align: center;
+        }
+        .event-timer.urgent {
+            border-color: var(--orange);
+            animation: blink 1s infinite;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: var(--card); border: 1px solid var(--border); color: var(--text);
+            width: 45px; height: 45px;
+            border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+            font-size: 1.3rem;
+        }
+        .icon-btn:hover { background: var(--blue); color: white; transform: scale(1.1); }
+
+        /* NEWS TICKER */
+        .news-ticker {
+            background: var(--bg);
+            color: var(--muted);
+            padding: 8px 0;
+            font-size: 0.9rem;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+            z-index: 90;
+        }
+        .ticker-content {
+            display: inline-block;
+            animation: tickerScroll 20s linear infinite;
+        }
+        .ticker-content span {
+            margin-right: 60px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* MAIN LAYOUT */
+        main { 
+            display: flex; 
+            flex: 1; 
+            overflow: hidden; 
+            width: 100%;
+        }
+
+        /* LEFT PANEL - EXPANDING */
+        .game-panel {
+            flex: 1;
+            display: flex; 
+            flex-direction: column;
+            padding: 20px; 
+            gap: 15px; 
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .canvas-wrap {
+            width: 100%;
+            max-width: var(--canvas-max-width);
+            flex: 1;
+            position: relative;
+            border-radius: 10px; 
+            overflow: hidden;
+            border: 2px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+        }
+        canvas { 
+            width: 100%; 
+            height: 100%; 
+            display: block; 
+        }
+        .canvas-overlay { 
+            position: absolute; top: 10px; left: 10px; 
+            display: flex; gap: 10px; 
+            z-index: 10;
+        }
+        .overlay-tag { 
+            background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; color: white; 
+            font-weight: bold;
+        }
+
+        .progress-section { 
+            width: 100%; 
+            max-width: var(--action-max-width);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .prog-labels { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--muted); font-weight: bold; }
+        .prog-bar { height: 25px; background: var(--card); border-radius: 12px; overflow: hidden; position: relative; }
+        .prog-fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--green)); transition: width 0.2s; }
+        .prog-text { position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:bold; color:white; text-shadow: 0 1px 2px black; }
+
+        .action-area { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 15px; 
+            width: 100%; 
+            max-width: var(--action-max-width);
+        }
+        .playbook-grid { display: flex; gap: 15px; width: 100%; }
+        .play-mode-btn {
+            flex: 1; padding: 15px; border-radius: 8px; border: 2px solid var(--border);
+            background: var(--card); color: var(--text); cursor: pointer; font-weight: bold; font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        .play-mode-btn:hover { transform: translateY(-2px); }
+        .play-mode-btn.active { background: var(--blue); border-color: var(--blue); color: white; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+        .play-mode-btn.risky.active { background: var(--red); border-color: var(--red); box-shadow: 0 4px 15px rgba(239,68,68,0.4); }
+
+        #btn-run {
+            background: linear-gradient(135deg, var(--red), #7f1d1d);
+            border: none; color: white; width: 100%;
+            padding: 20px; border-radius: 12px; font-size: 1.6rem; font-weight: bold; cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+        }
+        #btn-run:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.5); }
+        #btn-run:active { transform: scale(0.98); }
+
+        .combo-container { width: 100%; height: 10px; background: var(--card); border-radius: 5px; overflow: hidden; }
+        .combo-fill { height: 100%; width: 0%; background: var(--gold); transition: width 0.1s; }
+        .combo-text { font-size: 0.9rem; color: var(--gold); font-weight: bold; }
+        .click-info { font-size: 1rem; color: var(--muted); }
+        .click-info span { color: var(--green); font-weight: bold; font-size: 1.1rem; }
+
+        .sidebar {
+            width: var(--sidebar-width); 
+            background: var(--panel); border-left: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            z-index: 10;
+        }
+        .tabs { display: flex; background: var(--bg); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .tab { 
+            flex: 1; min-width: 70px; padding: 15px 5px; text-align: center; cursor: pointer; font-weight: bold; 
+            font-size: 0.9rem; color: var(--muted); border-bottom: 4px solid transparent; transition: all 0.2s; 
+        }
+        .tab:hover { background: rgba(255,255,255,0.05); }
+        .tab.active { color: var(--text); border-bottom-color: var(--blue); background: var(--panel); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 20px; display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+
+        .section-title { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; margin: 20px 0 10px; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        .section-title:first-child { margin-top: 0; }
+        
+        .shop-item {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+            padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .shop-item:hover { transform: translateX(5px); background: var(--card); }
+        .shop-item.affordable { border-left: 4px solid var(--green); }
+        .shop-item.not-affordable { opacity: 0.6; border-left: 4px solid var(--red); cursor: not-allowed; }
+        .item-left { display: flex; align-items: center; gap: 10px; }
+        .item-icon { font-size: 1.6rem; }
+        .item-name { font-weight: bold; font-size: 0.95rem; }
+        .item-desc { font-size: 0.75rem; color: var(--muted); }
+        .item-cost { font-weight: bold; color: var(--gold); font-size: 0.95rem; }
+        .item-owned { font-size: 0.75rem; color: var(--muted); }
+
+        /* Achievement Item Specific */
+        .ach-item {
+            background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+            padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .ach-item.completed {
+            border-color: var(--green);
+            background: rgba(34, 197, 94, 0.1);
+        }
+        .ach-item .item-name { color: var(--text); }
+        .ach-item.completed .item-name { color: var(--green); }
+        .ach-reward { font-size: 0.8rem; color: var(--gold); font-weight: bold; }
+        .ach-check { font-size: 1.2rem; margin-left: 10px; }
+
+        .meta-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .meta-title { font-weight: bold; margin-bottom: 10px; font-size: 1rem; }
+        .btn-action { width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 1rem; }
+        .btn-rebirth { background: var(--purple); color: white; }
+        .btn-prestige { background: var(--gold); color: black; }
+        .btn-action:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .btn-action:active:not(:disabled) { transform: scale(0.98); }
+        .btn-action:disabled { background: var(--card); color: var(--muted); cursor: not-allowed; opacity: 0.5; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-box-card { background: var(--bg); border: 1px solid var(--border); padding: 10px; border-radius: 4px; text-align: center; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; font-family: monospace; }
+        .stat-lbl { font-size: 0.7rem; color: var(--muted); }
+
+        /* LEAGUE / RIVALS STYLES */
+        .league-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .league-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--orange);
+            font-size: 1rem;
+        }
+        .rival-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: var(--panel);
+            border-radius: 4px;
+            margin-bottom: 5px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .rival-row.me {
+            border-color: var(--green);
+            background: rgba(34, 197, 94, 0.1);
+        }
+        .rival-row.winner {
+            border-color: var(--gold);
+            background: rgba(251, 191, 36, 0.1);
+        }
+        .rival-name { font-weight: bold; }
+        .rival-score { font-family: monospace; color: var(--muted); }
+        .rival-row.me .rival-score { color: var(--green); font-weight: bold; }
+        .rival-row.winner .rival-score { color: var(--gold); font-weight: bold; }
+
+        /* DRAFT / PLAYER STYLES */
+        .player-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .player-card.drafted {
+            border-color: var(--green);
+            background: rgba(34, 197, 94, 0.1);
+        }
+        .player-card:not(.drafted) { cursor: pointer; }
+        .player-card:not(.drafted):hover {
+            border-color: var(--blue);
+            transform: translateY(-2px);
+        }
+        .player-info { display: flex; flex-direction: column; gap: 3px; }
+        .player-name { font-weight: bold; color: var(--text); font-size: 0.95rem; }
+        .player-stats { font-size: 0.75rem; color: var(--muted); }
+        .player-morale { font-size: 0.75rem; color: var(--orange); }
+        .player-action {
+            background: var(--blue); color: white; border: none; padding: 8px 15px;
+            border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold;
+        }
+        .player-card.drafted .player-action {
+            background: var(--card); color: var(--muted); cursor: default;
+        }
+
+        /* STADIUM STYLES */
+        .stadium-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .stadium-item.upgraded {
+            border-color: var(--green);
+            background: rgba(34, 197, 94, 0.1);
+            cursor: default;
+        }
+        .stadium-item:not(.upgraded) { cursor: pointer; }
+        .stadium-item:not(.upgraded):hover {
+            border-color: var(--blue);
+            transform: translateY(-2px);
+        }
+        .stadium-info { display: flex; flex-direction: column; gap: 3px; }
+        .stadium-name { font-weight: bold; font-size: 0.95rem; }
+        .stadium-desc { font-size: 0.75rem; color: var(--muted); }
+        .stadium-cost { font-weight: bold; color: var(--gold); font-size: 0.9rem; }
+        .stadium-item.upgraded .stadium-cost { color: var(--green); }
+
+        /* MODALS */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1500;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.2s; }
+        .modal-box {
+            background: var(--panel); padding: 30px; border-radius: 12px;
+            width: 500px; max-width: 90%; border: 2px solid var(--border);
+            animation: slideUp 0.3s ease-out;
+            max-height: 85vh; overflow-y: auto;
+        }
+        .modal-title { font-size: 1.3rem; font-weight: bold; text-align: center; margin-bottom: 20px; }
+        .modal-desc { text-align: center; color: var(--muted); margin-bottom: 25px; line-height: 1.5; font-size: 0.95rem; }
+        .modal-choices { display: flex; gap: 10px; }
+        .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 1rem; }
+        .modal-btn:hover { transform: translateY(-2px); }
+        .modal-btn.primary { background: var(--blue); color: white; }
+        .modal-btn.danger { background: var(--red); color: white; }
+        .modal-btn.cancel { background: var(--card); color: var(--text); }
+
+        /* COLOR GRID FOR SETTINGS */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .color-swatch {
+            height: 45px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .color-swatch:hover { transform: scale(1.05); }
+        .color-swatch.active { border-color: var(--text); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        
+        .swatch-midnight { background: #0f172a; }
+        .swatch-forest { background: linear-gradient(135deg, #14532d, #0f172a); }
+        .swatch-ocean { background: linear-gradient(135deg, #1e3a8a, #0f172a); }
+        .swatch-sunset { background: linear-gradient(135deg, #7c2d12, #4c1d95); }
+        .swatch-neon { background: linear-gradient(135deg, #4c1d95, #be185d); }
+        .swatch-steel { background: linear-gradient(135deg, #334155, #0f172a); }
+        .swatch-void { background: #000000; }
+        .swatch-parchment { background: linear-gradient(135deg, #f5f5f4, #d6d3d1); }
+
+        /* SKIN SHOP STYLES */
+        .skin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .skin-item {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .skin-item:hover {
+            border-color: var(--blue);
+            transform: translateY(-2px);
+        }
+        .skin-item.active {
+            border-color: var(--green);
+            background: rgba(34, 197, 94, 0.1);
+        }
+        .skin-item.locked { opacity: 0.5; cursor: not-allowed; }
+        .skin-icon { font-size: 2.2rem; margin-bottom: 5px; }
+        .skin-name { font-size: 0.85rem; font-weight: bold; }
+        .skin-cost { font-size: 0.75rem; color: var(--gold); font-weight: bold; }
+
+        /* DISPLAY MODE SETTINGS */
+        .display-mode-section {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .display-mode-label {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            display: block;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .display-mode-toggle {
+            display: flex;
+            gap: 5px;
+        }
+        .dm-btn {
+            flex: 1;
+            padding: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .dm-btn.active {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: white;
+        }
+        .dm-btn:hover:not(.active) {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        /* AUTH SECTION IN SETTINGS */
+        .auth-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .auth-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .auth-badge {
+            background: var(--green);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .auth-badge.sso { background: var(--blue); }
+
+        .float-text {
+            position: fixed; pointer-events: none; font-weight: bold; font-size: 1.2rem;
+            color: var(--green); text-shadow: 0 2px 4px black; animation: floatUp 1s forwards; z-index: 999;
+        }
+        .float-text.loss { color: var(--red); }
+
+        /* KEYBOARD HINT */
+        .key-hint {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 10px;
+            text-align: center;
+        }
+        .key-hint kbd {
+            background: var(--card);
+            padding: 3px 6px;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 1200px) {
+            .sidebar { display: none; }
+            .game-panel { padding: 10px; }
+            .header-center-stats { display: none; }
+        }
+    </style>
+</head>
+<body class="bg-midnight">
+
+    <div id="screen-flash"></div>
+    <div id="toast-container"></div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="login-card">
+            <div class="login-title">🏈 Gridiron Grinders</div>
+            <div id="new-profile-form">
+                <div class="input-group">
+                    <label class="input-label">Profile Name</label>
+                    <input type="text" id="input-name" class="input-field" placeholder="Enter unique name" maxlength="20">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">4-Digit PIN</label>
+                    <input type="password" id="input-pin" class="input-field" placeholder="****" maxlength="4">
+                </div>
+                <button id="btn-create" class="btn-primary">Create Profile</button>
+                
+                <div class="divider">or</div>
+
+                <button id="btn-sso-login" class="btn-sso">
+                    <span class="sso-icon">🔗</span> Login with SSO (Remember Me)
+                </button>
+
+                <button id="btn-toggle-list" class="btn-secondary">Login to Existing Profile</button>
+            </div>
+            <div id="existing-profiles-section" style="display: none;">
+                <div class="existing-profiles">
+                    <div class="input-group" style="margin-top:0;">
+                        <label class="input-label">Select Profile</label>
+                        <div class="profile-list" id="profile-list"></div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Enter PIN (SSO profiles bypass this)</label>
+                        <input type="password" id="input-login-pin" class="input-field" placeholder="****" maxlength="4">
+                    </div>
+                    <button id="btn-login" class="btn-primary">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME INTERFACE -->
+    <header style="display: none;" id="game-header">
+        <div class="logo">🏈 Gridiron Grinders</div>
+        <div class="header-center-stats">
+            <div class="stat-box"><span class="stat-label">Yards</span><span class="stat-value c-yards" id="h-yards">0</span></div>
+            <div class="stat-box"><span class="stat-label">YPS</span><span class="stat-value c-yps" id="h-yps">0</span></div>
+            <div class="stat-box"><span class="stat-label">Mult</span><span class="stat-value c-mult" id="h-mult">x1.0</span></div>
+            <div class="stat-box"><span class="stat-label">Coins</span><span class="stat-value c-coins" id="h-coins">0</span></div>
+            <div class="stat-box">
+                <span class="stat-label">Next Event</span>
+                <div class="event-timer" id="event-timer">--:--</div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" id="btn-logout" title="Logout">🚪</button>
+            <button class="icon-btn" id="btn-save" title="Save">💾</button>
+            <button class="icon-btn" id="btn-settings" title="Settings">⚙️</button>
+        </div>
+    </header>
+
+    <!-- NEWS TICKER -->
+    <div class="news-ticker" id="news-ticker" style="display: none;">
+        <div class="ticker-content" id="ticker-content">
+            <span>Welcome to Gridiron Grinders!</span>
+            <span>Use <kbd>Space</kbd> for Safe Run and <kbd>Shift</kbd>+<kbd>Space</kbd> for Risky Run.</span>
+            <span>Keep the ball moving!</span>
+        </div>
+    </div>
+
+    <main style="display: none;" id="game-main">
+        <div class="game-panel">
+            <div class="canvas-wrap">
+                <canvas id="game-canvas"></canvas>
+                <div class="canvas-overlay">
+                    <div class="overlay-tag" id="ov-era">HS</div>
+                    <div class="overlay-tag" id="ov-combo">x1.0</div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="prog-labels"><span>Next Era</span><span id="prog-pct">0%</span></div>
+                <div class="prog-bar">
+                    <div class="prog-fill" id="prog-fill"></div>
+                    <div class="prog-text" id="prog-text">0 / 10k</div>
+                </div>
+            </div>
+
+            <div class="action-area">
+                <div class="playbook-grid">
+                    <button class="play-mode-btn active" id="mode-safe">SAFE</button>
+                    <button class="play-mode-btn risky" id="mode-risky">RISKY</button>
+                </div>
+                <button id="btn-run">RUN PLAY</button>
+                <div class="combo-container"><div class="combo-fill" id="combo-fill"></div></div>
+                <div class="combo-text" id="combo-text">Combo: x1.00</div>
+                <div class="click-info">Power: <span id="display-power">1</span></div>
+                <div class="key-hint">
+                    <kbd>Space</kbd> Safe | <kbd>Shift</kbd>+<kbd>Space</kbd> Risky | <kbd>S</kbd> Settings
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="tabs">
+                <div class="tab active" data-tab="shop">Shop</div>
+                <div class="tab" data-tab="draft">Draft</div>
+                <div class="tab" data-tab="stadium">Stadium</div>
+                <div class="tab" data-tab="league">League</div>
+                <div class="tab" data-tab="stats">Stats</div>
+                <div class="tab" data-tab="ach">Ach.</div>
+                <div class="tab" data-tab="meta">Meta</div>
+            </div>
+
+            <div class="tab-content active" id="tab-shop">
+                <div class="section-title">Upgrades</div>
+                <div id="list-upgrades"></div>
+            </div>
+
+            <div class="tab-content" id="tab-draft">
+                <div class="section-title">Roster (Max 5)</div>
+                <div id="list-draft-players"></div>
+                <div class="section-title">Available Players</div>
+                <div id="list-available-players"></div>
+            </div>
+
+            <div class="tab-content" id="tab-stadium">
+                <div class="section-title">Stadium Progression</div>
+                <div id="list-stadium"></div>
+                <div style="margin-top:15px; font-size:0.8rem; color:var(--muted); text-align:center;">
+                    Crowd Hype Boosts Click Power!
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-stats">
+                <div class="meta-card">
+                    <div class="meta-title">Session</div>
+                    <div class="stats-grid">
+                        <div class="stat-box-card"><div class="stat-val" id="stat-clicks">0</div><div class="stat-lbl">Clicks</div></div>
+                        <div class="stat-box-card"><div class="stat-val" id="stat-time">0s</div><div class="stat-lbl">Time</div></div>
+                        <div class="stat-box-card"><div class="stat-val" id="stat-fumbles">0</div><div class="stat-lbl">Fumbles</div></div>
+                        <div class="stat-box-card"><div class="stat-val" id="stat-events">0</div><div class="stat-lbl">Events</div></div>
+                    </div>
+                </div>
+                <div class="meta-card">
+                    <div class="meta-title">Career</div>
+                    <div class="stats-grid">
+                        <div class="stat-box-card"><div class="stat-val" id="stat-total-yards">0</div><div class="stat-lbl">Total Yards</div></div>
+                        <div class="stat-box-card"><div class="stat-val" id="stat-legacy">0</div><div class="stat-lbl">Legacy</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-league">
+                <div class="league-card">
+                    <div class="league-title">
+                        <span>⚔️ The League</span>
+                        <span id="league-winner-display" style="font-size:0.8rem; color:var(--gold)">Leader: -</span>
+                    </div>
+                    <div id="league-list"></div>
+                    <div class="section-title" style="margin-top:15px;">Season Reward</div>
+                    <p style="font-size:0.8rem; color:var(--muted);">Win the league to unlock the <b>Golden MVP</b> Ball Skin!</p>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-ach">
+                <div class="section-title">Achievements</div>
+                <div id="list-achievements"></div>
+            </div>
+
+            <div class="tab-content" id="tab-meta">
+                <div class="meta-card">
+                    <div class="meta-title" style="color:var(--purple)">Era Rebirth</div>
+                    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Reset run for Era Points</p>
+                    <button class="btn-action btn-rebirth" id="btn-rebirth" disabled>REBIRTH</button>
+                </div>
+                <div class="meta-card">
+                    <div class="meta-title" style="color:var(--gold)">Legacy Prestige</div>
+                    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Reset ALL for Legacy</p>
+                    <button class="btn-action btn-prestige" id="btn-prestige" disabled>RETIRE</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODALS -->
+    <div class="modal-overlay" id="event-modal">
+        <div class="modal-box" style="border-color: var(--orange)">
+            <div class="modal-title" style="color:var(--orange)">⚡ SUDDEN EVENT</div>
+            <div class="modal-desc" id="event-desc"></div>
+            <div class="modal-choices" id="event-choices" style="flex-direction: column;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-box" style="border-color: var(--blue)">
+            <div class="modal-title" style="color:var(--blue)">Settings</div>
+            
+            <!-- AUTH SECTION -->
+            <div class="auth-card">
+                <div style="font-weight:bold; margin-bottom:10px; font-size:0.9rem;">Authentication</div>
+                <div class="auth-status">
+                    <span>Profile: <b id="auth-profile-name">-</b></span>
+                    <span id="auth-badge-container"></span>
+                </div>
+            </div>
+
+            <!-- DISPLAY MODE SECTION -->
+            <div class="display-mode-section">
+                <span class="display-mode-label">Display Mode</span>
+                <div class="display-mode-toggle">
+                    <button class="dm-btn active" id="dm-standard" onclick="Game.setDisplayMode('standard')">Standard</button>
+                    <button class="dm-btn" id="dm-ultrawide" onclick="Game.setDisplayMode('ultrawide')">Ultrawide</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px; font-weight: bold; color: var(--text);">Appearance</div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>Light Mode</span>
+                <label><input type="checkbox" id="chk-light"> Toggle</label>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>Particles</span>
+                <label><input type="checkbox" id="chk-particles" checked> Toggle</label>
+            </div>
+            
+            <div style="margin-bottom: 10px; font-weight: bold; color: var(--text);">Background</div>
+            <div class="color-grid" id="color-grid"></div>
+            
+            <div style="margin-bottom: 10px; font-weight: bold; color: var(--text); margin-top:10px;">Ball Skins</div>
+            <div class="skin-grid" id="skin-grid"></div>
+
+            <button class="btn-action" style="background:var(--blue); color:white; margin-top: 10px;" onclick="Game.closeSettings()">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="logout-modal">
+        <div class="modal-box" style="border-color: var(--red)">
+            <div class="modal-title" style="color:var(--red)">Confirm Logout</div>
+            <div class="modal-desc">Are you sure you want to log out?<br>Your progress will be saved.<br><small>You will need to login again next time.</small></div>
+            <div class="modal-choices">
+                <button class="modal-btn cancel" onclick="Game.cancelLogout()">Cancel</button>
+                <button class="modal-btn danger" onclick="Game.confirmLogout()">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const Game = {
+        PROFILE_KEY: 'gridiron_profiles',
+        LAST_LOGIN_KEY: 'gridiron_last_login',
+        currentProfile: null,
+        isSSOProfile: false,
+
+        ERAS: [
+            { name: "High School", threshold: 0, mult: 1.0, rebirthReq: 10000, next: "College", coins: 0 },
+            { name: "College", threshold: 10000, mult: 1.5, rebirthReq: 500000, next: "NFL", coins: 10 },
+            { name: "NFL", threshold: 500000, mult: 3.0, rebirthReq: 10000000, next: "Pro", coins: 50 },
+            { name: "Pro", threshold: 10000000, mult: 5.0, rebirthReq: 500000000, next: "HOF", coins: 100 },
+            { name: "HOF", threshold: 500000000, mult: 10.0, rebirthReq: 10000000000, next: "MAX", coins: 500 }
+        ],
+
+        ITEMS: {
+            upgrades: [
+                { id: 'u1', name: 'Cleats', icon: '👟', desc: '+2 Click', cost: 50, mult: 1.5, effect: 2 },
+                { id: 'u2', name: 'Playbook', icon: '📋', desc: '+10 Click', cost: 500, mult: 1.5, effect: 10 },
+                { id: 'u3', name: 'Gym', icon: '🏋️', desc: '+50 Click', cost: 5000, mult: 1.6, effect: 50 },
+                { id: 'u4', name: 'Analytics', icon: '📊', desc: '+200 Click', cost: 50000, mult: 1.8, effect: 200 },
+                { id: 'u5', name: 'Sponsor', icon: '💰', desc: '+1 CPS', cost: 200, mult: 1.3, effect: 1, isCoin: true },
+                { id: 'u6', name: 'Merch', icon: '👕', desc: '+5 CPS', cost: 2000, mult: 1.4, effect: 5, isCoin: true },
+                { id: 'u7', name: 'Merch Store', icon: '🏪', desc: '+25 CPS', cost: 20000, mult: 1.5, effect: 25, isCoin: true }
+            ]
+        },
+
+        DRAFT_PLAYERS: [
+            { id: 'd1', name: 'Jake "Speedster" Miller', pos: 'WR', baseYps: 5, riskBonus: 0.1, cost: 500 },
+            { id: 'd2', name: 'Brutus "Tank" Smith', pos: 'RB', baseYps: 10, riskBonus: 0.05, cost: 2000 },
+            { id: 'd3', name: 'Ace "The Gun" Johnson', pos: 'QB', baseYps: 20, riskBonus: 0.15, cost: 10000 },
+            { id: 'd4', name: 'Shadow "Whip" Lee', pos: 'QB', baseYps: 50, riskBonus: 0.2, cost: 50000 },
+            { id: 'd5', name: 'Titan "Iron" Brooks', pos: 'RB', baseYps: 100, riskBonus: 0.08, cost: 250000 },
+            { id: 'd6', name: 'Zephyr "Wind" Cruz', pos: 'WR', baseYps: 250, riskBonus: 0.25, cost: 1000000 }
+        ],
+
+        STADIUM_LEVELS: [
+            { id: 's1', name: 'Local Field', desc: 'Basic Setup', cost: 0, clickBonus: 0, visual: 'plain' },
+            { id: 's2', name: 'Small Arena', desc: '+2% Click Power', cost: 500, clickBonus: 0.02, visual: 'arena' },
+            { id: 's3', name: 'City Stadium', desc: '+5% Click Power', cost: 5000, clickBonus: 0.05, visual: 'city' },
+            { id: 's4', name: 'Pro Dome', desc: '+10% Click Power', cost: 50000, clickBonus: 0.1, visual: 'dome' },
+            { id: 's5', name: 'HOF Colosseum', desc: '+20% Click Power', cost: 500000, clickBonus: 0.2, visual: 'hof' },
+            { id: 's6', name: 'Pro Bowl Plaza', desc: '+35% Click Power', cost: 5000000, clickBonus: 0.35, visual: 'pro' },
+            { id: 's7', name: 'Superdome II', desc: '+50% Click Power', cost: 50000000, clickBonus: 0.5, visual: 'super' },
+            { id: 's8', name: 'Galactic Gridiron', desc: '+75% Click Power', cost: 500000000, clickBonus: 0.75, visual: 'space' },
+            { id: 's9', name: 'Nebula Stadium', desc: '+100% Click Power', cost: 5000000000, clickBonus: 1.0, visual: 'nebula' },
+            { id: 's10', name: 'Infinity Field', desc: '+200% Click Power', cost: 50000000000, clickBonus: 2.0, visual: 'infinity' }
+        ],
+
+        ACHIEVEMENTS: [
+            { id: 'ach_click_100', name: 'First 100', desc: 'Click 100 times', check: s => s.totalClicks >= 100, rewardMult: 0.02, coins: 10 },
+            { id: 'ach_click_1k', name: 'Clicker', desc: 'Click 1,000 times', check: s => s.totalClicks >= 1000, rewardMult: 0.02, coins: 50 },
+            { id: 'ach_yards_100k', name: 'Century', desc: 'Reach 100k Yards', check: s => s.totalYards >= 100000, rewardMult: 0.02, coins: 100 },
+            { id: 'ach_yards_1m', name: 'Millionaire', desc: 'Reach 1M Yards', check: s => s.totalYards >= 1000000, rewardMult: 0.03, coins: 500 },
+            { id: 'ach_fumble_0', name: 'Safe Hands', desc: 'Reach 1M Yards with 0 Fumbles', check: s => s.totalYards >= 1000000 && s.totalFumbles === 0, rewardMult: 0.05, coins: 1000 },
+            { id: 'ach_era_1', name: 'College Bound', desc: 'Reach College Era', check: s => s.currentEra >= 1, rewardMult: 0.02, coins: 20 },
+            { id: 'ach_era_2', name: 'Pro Debut', desc: 'Reach NFL Era', check: s => s.currentEra >= 2, rewardMult: 0.03, coins: 100 },
+            { id: 'ach_rebirth', name: 'Reborn', desc: 'Complete a Rebirth', check: s => s.eraPoints > 0, rewardMult: 0.05, coins: 200 },
+            { id: 'ach_sso', name: 'Connected', desc: 'Login via SSO', check: s => s.isSSO, rewardMult: 0.01, coins: 50 }
+        ],
+
+        SKINS: [
+            { id: 'standard', name: 'Standard', icon: '🏈', cost: 0, color: '#8B4513', glow: false },
+            { id: 'gold', name: 'Gold', icon: '🏆', cost: 150, color: '#FFD700', glow: true },
+            { id: 'neon', name: 'Neon', icon: '⚡', cost: 500, color: '#00FF00', glow: true },
+            { id: 'ghost', name: 'Ghost', icon: '👻', cost: 1500, color: '#FFFFFF', glow: true },
+            { id: 'rainbow', name: 'Rainbow', icon: '🌈', cost: 5000, color: '#e91e63', glow: true },
+            { id: 'mvp', name: 'MVP Golden', icon: '🌟', cost: -1, color: '#FFEA00', glow: true, special: true } 
+        ],
+
+        AI_RIVALS: [
+            { name: "Steel City Steam", baseSpeed: 0.001, icon: "🔥" },
+            { name: "Neon Knights", baseSpeed: 0.002, icon: "⚔️" },
+            { name: "Void Vipers", baseSpeed: 0.0015, icon: "🐍" },
+            { name: "Quantum Qs", baseSpeed: 0.0025, icon: "⚛️" }
+        ],
+
+        EVENTS: [
+            {
+                title: "Injury",
+                desc: "Your Star RB is hurt.",
+                choices: [
+                    { text: "Play Through (+50% Clicks 30s, -10% Morale RB)", action: () => { Game.addEffect('inj', 30, 0.5); Game.modifyMorale('RB', -0.1); } },
+                    { text: "Sit Out (-10% YPS 60s, +5% Morale RB)", action: () => { Game.addEffect('sit', 60, -0.1); Game.modifyMorale('RB', 0.05); } }
+                ]
+            },
+            {
+                title: "Sponsor",
+                desc: "Offer: +1k Yards, -20% YPS 60s",
+                choices: [
+                    { text: "Accept", action: () => { Game.state.yards += 1000; Game.state.totalYards += 1000; Game.addEffect('spon', 60, -0.2); Game.showToast("Sponsor Accepted!"); } },
+                    { text: "Decline", action: () => {} }
+                ]
+            },
+            {
+                title: "Hot Streak",
+                desc: "The crowd is going wild!",
+                choices: [
+                    { text: "Ride it (+100% Clicks 20s, +10% Morale All)", action: () => { Game.addEffect('hot', 20, 1.0); Game.modifyMorale('ALL', 0.1); } },
+                    { text: "Play Safe (+20% YPS 60s, -5% Morale All)", action: () => { Game.addEffect('safe', 60, 0.2); Game.modifyMorale('ALL', -0.05); } }
+                ]
+            }
+        ],
+
+        NEWS_MENUS: [
+            "Local paper praises your team's discipline.",
+            "Rival team mocks your new jersey.",
+            "Fans are excited for the upcoming match.",
+            "Coach reminds players to stay hydrated.",
+            "Sponsor logo is visible on the field.",
+            "Weather forecast predicts a sunny game.",
+            "Your QB is rumored to be drafting new plays.",
+            "The crowd noise is deafening today!"
+        ],
+
+        BG_PRESETS: [
+            { id: 'midnight', name: 'Midnight', class: 'bg-midnight', swatchClass: 'swatch-midnight' },
+            { id: 'forest', name: 'Forest', class: 'bg-forest', swatchClass: 'swatch-forest' },
+            { id: 'ocean', name: 'Ocean', class: 'bg-ocean', swatchClass: 'swatch-ocean' },
+            { id: 'sunset', name: 'Sunset', class: 'bg-sunset', swatchClass: 'swatch-sunset' },
+            { id: 'neon', name: 'Neon', class: 'bg-neon', swatchClass: 'swatch-neon' },
+            { id: 'steel', name: 'Steel', class: 'bg-steel', swatchClass: 'swatch-steel' },
+            { id: 'void', name: 'Void', class: 'bg-void', swatchClass: 'swatch-void' },
+            { id: 'parchment', name: 'Parchment', class: 'bg-parchment', swatchClass: 'swatch-parchment' }
+        ],
+
+        state: {},
+        currentMode: 'safe',
+        dom: {},
+        canvas: null, 
+        ctx: null,
+        eventInterval: null,
+        newsInterval: null,
+        nextEventTime: 0,
+        eventTimerDisplay: null,
+        ballTrail: [], 
+        lastRivalUpdate: 0,
+        displayMode: 'standard',
+
+        init: function() {
+            this.initProfileSystem();
+            this.cacheDom();
+            this.bindProfileEvents();
+            this.bindGameEvents();
+            this.bindSSOEvents();
+            this.buildColorGrid();
+            this.bindKeyboardShortcuts();
+            this.applyDisplayMode('standard');
+            
+            // CHECK FOR AUTO-LOGIN
+            this.checkAutoLogin();
+        },
+
+        // AUTO LOGIN LOGIC
+        checkAutoLogin: function() {
+            const lastLogin = localStorage.getItem(this.LAST_LOGIN_KEY);
+            if (lastLogin) {
+                const profiles = this.getProfiles();
+                const profile = profiles.find(p => p.name === lastLogin);
+                if (profile) {
+                    // Determine if it was SSO based on the profile object
+                    this.login(lastLogin, profile.isSSO === true);
+                    this.showToast("Auto-logged in as " + lastLogin, "info");
+                } else {
+                    localStorage.removeItem(this.LAST_LOGIN_KEY);
+                }
+            }
+        },
+
+        bindSSOEvents: function() {
+            const ssoBtn = document.getElementById('btn-sso-login');
+            ssoBtn.onclick = () => {
+                const ssoName = "SSO_User";
+                const profiles = this.getProfiles();
+                let profile = profiles.find(p => p.name === ssoName);
+                
+                if(!profile) {
+                    profiles.push({ name: ssoName, pin: "SSO", isSSO: true, totalYards: 0 });
+                    this.saveProfiles(profiles);
+                    profile = profiles[profiles.length - 1];
+                }
+                this.login(ssoName, true);
+                this.showToast("SSO Login Successful! Remembered for next time.", "info");
+            };
+        },
+
+        bindKeyboardShortcuts: function() {
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                if (e.code === 'Space' && e.shiftKey) {
+                    e.preventDefault();
+                    this.currentMode = 'risky';
+                    this.updateModeUI();
+                    this.triggerPlay(e);
+                    return;
+                }
+
+                if (e.code === 'Space' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.currentMode = 'safe';
+                    this.updateModeUI();
+                    this.triggerPlay(e);
+                    return;
+                }
+
+                if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.altKey && !this.dom['settings-modal'].classList.contains('active')) {
+                    this.openSettings();
+                }
+
+                if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.altKey) {
+                    if(this.state && this.state.settings) {
+                        this.state.settings.light = !this.state.settings.light;
+                        document.body.classList.toggle('light', this.state.settings.light);
+                        if(this.dom['chk-light']) this.dom['chk-light'].checked = this.state.settings.light;
+                        this.saveGame();
+                    }
+                }
+
+                if (e.key === 'Escape') {
+                    if (this.dom['settings-modal'].classList.contains('active')) this.closeSettings();
+                    if (this.dom['event-modal'].classList.contains('active')) this.dom['event-modal'].classList.remove('active');
+                    if (this.dom['logout-modal'].classList.contains('active')) this.cancelLogout();
+                }
+            });
+        },
+
+        triggerPlay: function(e) {
+            if(!this.state) return;
+            const clientX = e.clientX || window.innerWidth / 2;
+            const clientY = e.clientY || window.innerHeight / 2;
+            this.handleClick({ clientX: clientX, clientY: clientY });
+        },
+
+        updateModeUI: function() {
+            if (this.currentMode === 'safe') {
+                this.dom['mode-safe'].classList.add('active');
+                this.dom['mode-risky'].classList.remove('active');
+            } else {
+                this.dom['mode-risky'].classList.add('active');
+                this.dom['mode-safe'].classList.remove('active');
+            }
+        },
+
+        buildColorGrid: function() {
+            const grid = document.getElementById('color-grid');
+            if(!grid) return;
+            grid.innerHTML = '';
+            this.BG_PRESETS.forEach(bg => {
+                const swatch = document.createElement('div');
+                swatch.className = `color-swatch ${bg.swatchClass}`;
+                swatch.dataset.bg = bg.id;
+                swatch.title = bg.name;
+                swatch.onclick = () => this.selectBackground(bg.id);
+                grid.appendChild(swatch);
+            });
+        },
+
+        buildSkinGrid: function() {
+            const grid = document.getElementById('skin-grid');
+            if(!grid || !this.state) return;
+            grid.innerHTML = '';
+            this.SKINS.forEach(skin => {
+                const div = document.createElement('div');
+                div.className = 'skin-item';
+                div.id = `skin-${skin.id}`;
+                
+                let unlocked = this.state.ownedSkins && this.state.ownedSkins.includes(skin.id);
+                if(skin.id === 'mvp') {
+                    unlocked = this.state.leagueWon;
+                }
+                const equipped = this.state.equippedSkin === skin.id;
+                
+                let costText = "Locked";
+                if(skin.id === 'mvp') {
+                    costText = this.state.leagueWon ? "Unlocked" : "Win League";
+                } else if (skin.cost === 0) {
+                    costText = "Free";
+                } else {
+                    costText = skin.cost + " Coins";
+                }
+
+                div.innerHTML = `
+                    <div class="skin-icon">${skin.icon}</div>
+                    <div class="skin-name">${skin.name}</div>
+                    <div class="skin-cost">${costText}</div>
+                `;
+                
+                if (unlocked) {
+                    div.onclick = () => this.equipSkin(skin.id);
+                    if (equipped) div.classList.add('active');
+                } else {
+                    if(skin.id !== 'mvp') {
+                        div.onclick = () => this.buySkin(skin.id);
+                    }
+                    div.classList.add('locked');
+                }
+                
+                grid.appendChild(div);
+            });
+        },
+
+        buySkin: function(id) {
+            const skin = this.SKINS.find(s => s.id === id);
+            if (!skin || skin.id === 'mvp') return;
+            
+            if (this.state.coins >= skin.cost) {
+                this.state.coins -= skin.cost;
+                if (!this.state.ownedSkins) this.state.ownedSkins = [];
+                if (!this.state.ownedSkins.includes(id)) this.state.ownedSkins.push(id);
+                this.equipSkin(id);
+                this.updateUI();
+                this.showToast(`Unlocked ${skin.name}!`);
+            } else {
+                this.showToast("Not enough coins!");
+            }
+        },
+
+        equipSkin: function(id) {
+            this.state.equippedSkin = id;
+            this.buildSkinGrid();
+            this.saveGame();
+        },
+
+        selectBackground: function(bgId) {
+            this.BG_PRESETS.forEach(bg => document.body.classList.remove(bg.class));
+            const bgDef = this.BG_PRESETS.find(b => b.id === bgId);
+            if (bgDef) {
+                document.body.classList.add(bgDef.class);
+                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+                const el = document.querySelector(`.color-swatch[data-bg="${bgId}"]`);
+                if(el) el.classList.add('active');
+                if(this.currentProfile && this.state) {
+                    this.state.settings.bg = bgId;
+                    this.saveGame();
+                }
+            }
+        },
+
+        applyBackground: function() {
+            if (this.state.settings && this.state.settings.bg) {
+                this.selectBackground(this.state.settings.bg);
+            } else {
+                this.selectBackground('midnight');
+            }
+            if (this.state.settings && this.state.settings.displayMode) {
+                this.setDisplayMode(this.state.settings.displayMode);
+            }
+        },
+
+        getProfiles: function() {
+            const raw = localStorage.getItem(this.PROFILE_KEY);
+            return raw ? JSON.parse(raw) : [];
+        },
+
+        saveProfiles: function(profiles) {
+            localStorage.setItem(this.PROFILE_KEY, JSON.stringify(profiles));
+        },
+
+        initProfileSystem: function() {
+            this.renderProfileList();
+        },
+
+        renderProfileList: function() {
+            const profiles = this.getProfiles();
+            const list = document.getElementById('profile-list');
+            list.innerHTML = '';
+            if (profiles.length === 0) {
+                list.innerHTML = '<div style="padding:10px; color:var(--muted); text-align:center;">No profiles yet.</div>';
+                return;
+            }
+            profiles.forEach((p, index) => {
+                const div = document.createElement('div');
+                div.className = 'profile-item';
+                if(p.isSSO) div.classList.add('sso-profile');
+                
+                div.onclick = () => {
+                    document.querySelectorAll('.profile-item').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                    this.selectedProfileIndex = index;
+                    document.getElementById('input-login-pin').focus();
+                };
+                
+                const ssoBadge = p.isSSO ? '<span style="color:var(--blue); font-size:0.7rem;">[SSO]</span>' : '';
+                div.innerHTML = `
+                    <div>
+                        <div class="item-name">${p.name} ${ssoBadge}</div>
+                        <div class="item-desc">Total Yards: ${this.formatNum(p.totalYards || 0)}</div>
+                    </div>
+                    <div style="color:var(--muted);">🔒</div>
+                `;
+                list.appendChild(div);
+            });
+        },
+
+        bindProfileEvents: function() {
+            document.getElementById('btn-toggle-list').onclick = () => {
+                const form = document.getElementById('new-profile-form');
+                const listSection = document.getElementById('existing-profiles-section');
+                if (form.style.display !== 'none') {
+                    form.style.display = 'none';
+                    listSection.style.display = 'block';
+                    this.renderProfileList();
+                } else {
+                    form.style.display = 'block';
+                    listSection.style.display = 'none';
+                }
+            };
+
+            document.getElementById('btn-create').onclick = () => {
+                const name = document.getElementById('input-name').value.trim();
+                const pin = document.getElementById('input-pin').value;
+                if (!name) { alert("Please enter a name."); return; }
+                if (pin.length !== 4) { alert("PIN must be 4 digits."); return; }
+
+                const profiles = this.getProfiles();
+                if (profiles.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+                    alert("Name already exists.");
+                    return;
+                }
+                profiles.push({ name: name, pin: pin, isSSO: false, totalYards: 0 });
+                this.saveProfiles(profiles);
+                this.login(name, false);
+            };
+
+            document.getElementById('btn-login').onclick = () => {
+                const pin = document.getElementById('input-login-pin').value;
+                const profiles = this.getProfiles();
+                if (this.selectedProfileIndex === undefined || profiles[this.selectedProfileIndex] === undefined) {
+                    alert("Please select a profile first.");
+                    return;
+                }
+                const selectedProfile = profiles[this.selectedProfileIndex];
+                
+                if(selectedProfile.isSSO) {
+                    this.login(selectedProfile.name, true);
+                } else if (selectedProfile.pin === pin) {
+                    this.login(selectedProfile.name, false);
+                } else {
+                    alert("Incorrect PIN.");
+                    const input = document.getElementById('input-login-pin');
+                    input.classList.add('shake');
+                    setTimeout(() => input.classList.remove('shake'), 500);
+                }
+            };
+
+            document.getElementById('btn-logout').onclick = () => {
+                document.getElementById('logout-modal').classList.add('active');
+            };
+        },
+
+        cancelLogout: function() {
+            document.getElementById('logout-modal').classList.remove('active');
+        },
+
+        confirmLogout: function() {
+            document.getElementById('logout-modal').classList.remove('active');
+            this.logout();
+        },
+
+        login: function(name, isSSO) {
+            this.currentProfile = name;
+            this.isSSOProfile = isSSO;
+            
+            // Save for auto-login
+            localStorage.setItem(this.LAST_LOGIN_KEY, name);
+
+            document.getElementById('login-screen').classList.add('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('game-header').style.display = 'flex';
+                document.getElementById('game-main').style.display = 'flex';
+                document.getElementById('news-ticker').style.display = 'block';
+                document.getElementById('game-main').classList.add('animate-fade');
+                
+                this.loadGame();
+                this.state.isSSO = isSSO; 
+                
+                const offlineGain = this.checkOfflineProgress();
+                
+                this.applyBackground();
+                this.startGameLogic();
+                this.startNewsTicker();
+                
+                this.initLeague();
+                this.updateAuthUI();
+                
+                if(offlineGain) {
+                    this.showToast(`Welcome Back! Gained ${this.formatNum(offlineGain.yards)} Yards while away.`, 'info');
+                }
+            }, 300);
+        },
+
+        logout: function() {
+            this.saveGame();
+            this.currentProfile = null;
+            this.isSSOProfile = false;
+            
+            // Clear auto-login
+            localStorage.removeItem(this.LAST_LOGIN_KEY);
+            
+            clearInterval(this.eventInterval);
+            this.eventInterval = null;
+            if (this.eventTimerDisplay) this.eventTimerDisplay.textContent = '--:--';
+
+            document.getElementById('game-header').style.display = 'none';
+            document.getElementById('game-main').style.display = 'none';
+            document.getElementById('news-ticker').style.display = 'none';
+            document.getElementById('game-main').classList.remove('animate-fade');
+            
+            const loginScreen = document.getElementById('login-screen');
+            loginScreen.classList.remove('hidden');
+            
+            document.getElementById('new-profile-form').style.display = 'block';
+            document.getElementById('existing-profiles-section').style.display = 'none';
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-pin').value = '';
+            this.showToast("Logged Out");
+        },
+
+        getSaveKey: function() {
+            return `gridiron_save_${this.currentProfile}`;
+        },
+
+        startGameLogic: function() {
+            this.buildShop();
+            this.buildDraftUI();
+            this.buildStadiumUI();
+            this.buildAchievements();
+            this.buildSkinGrid();
+            this.initCanvas();
+            this.startLoop();
+            this.updateUI();
+            this.scheduleNextEvent();
+        },
+
+        bindGameEvents: function() {
+            this.dom['btn-run'].onclick = (e) => this.handleClick(e);
+            this.dom['mode-safe'].onclick = () => { this.currentMode='safe'; this.updateModeUI(); };
+            this.dom['mode-risky'].onclick = () => { this.currentMode='risky'; this.updateModeUI(); };
+            
+            this.dom['btn-rebirth'].onclick = () => this.rebirth();
+            this.dom['btn-prestige'].onclick = () => this.prestige();
+            
+            this.dom['btn-settings'].onclick = () => { 
+                this.openSettings(); 
+            };
+            
+            this.dom['chk-light'].onchange = (e) => { 
+                if(this.state && this.state.settings) {
+                    this.state.settings.light = e.target.checked; 
+                    document.body.classList.toggle('light', e.target.checked); 
+                    this.saveGame(); 
+                }
+            };
+            this.dom['chk-particles'].onchange = (e) => { 
+                if(this.state && this.state.settings) {
+                    this.state.settings.particles = e.target.checked; 
+                    this.saveGame(); 
+                }
+            };
+            
+            this.dom['btn-save'].onclick = () => { 
+                this.saveGame(); 
+                this.showToast("Game Saved!"); 
+            };
+
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.onclick = () => {
+                    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+                    tab.classList.add('active');
+                    const contentId = 'tab-' + tab.dataset.tab;
+                    const contentEl = document.getElementById(contentId);
+                    if(contentEl) contentEl.classList.add('active');
+                    
+                    if(tab.dataset.tab === 'league') this.updateLeagueUI();
+                };
+            });
+        },
+
+        openSettings: function() {
+            this.dom['settings-modal'].classList.add('active');
+            if(this.state && this.state.settings) {
+                this.dom['chk-light'].checked = this.state.settings.light;
+                this.dom['chk-particles'].checked = this.state.settings.particles;
+                
+                const mode = this.state.settings.displayMode || 'standard';
+                document.getElementById('dm-standard').classList.toggle('active', mode === 'standard');
+                document.getElementById('dm-ultrawide').classList.toggle('active', mode === 'ultrawide');
+            }
+            this.updateColorGridActive();
+            this.buildSkinGrid();
+            this.updateAuthUI();
+        },
+
+        updateAuthUI: function() {
+            const nameEl = document.getElementById('auth-profile-name');
+            const badgeContainer = document.getElementById('auth-badge-container');
+            if(!nameEl || !badgeContainer) return;
+
+            nameEl.innerText = this.currentProfile || "Not Logged In";
+            
+            badgeContainer.innerHTML = '';
+            if(this.isSSOProfile) {
+                const badge = document.createElement('span');
+                badge.className = 'auth-badge sso';
+                badge.innerText = 'SSO';
+                badgeContainer.appendChild(badge);
+            } else if (this.currentProfile) {
+                const badge = document.createElement('span');
+                badge.className = 'auth-badge';
+                badge.innerText = 'PIN';
+                badgeContainer.appendChild(badge);
+            }
+        },
+
+        cacheDom: function() {
+            const ids = ['h-yards','h-yps','h-mult','h-coins','ov-era','ov-combo','prog-pct','prog-fill','prog-text','btn-run','display-power','combo-fill','combo-text','mode-safe','mode-risky','list-upgrades','list-achievements','btn-rebirth','btn-prestige','stat-clicks','stat-time','stat-fumbles','stat-events','stat-total-yards','stat-legacy','event-modal','event-desc','event-choices','settings-modal','chk-light','chk-particles','btn-settings','btn-save','game-canvas','btn-logout','event-timer','news-ticker','ticker-content', 'league-list', 'league-winner-display', 'list-draft-players', 'list-available-players', 'list-stadium', 'auth-profile-name', 'auth-badge-container'];
+            ids.forEach(id => this.dom[id] = document.getElementById(id));
+            if (this.dom['event-timer']) this.eventTimerDisplay = this.dom['event-timer'];
+        },
+
+        updateColorGridActive: function() {
+            if (this.state.settings && this.state.settings.bg) {
+                document.querySelectorAll('.color-swatch').forEach(s => {
+                    if (s.dataset.bg === this.state.settings.bg) {
+                        s.classList.add('active');
+                    } else {
+                        s.classList.remove('active');
+                    }
+                });
+            }
+        },
+
+        buildShop: function() {
+            this.renderList('list-upgrades', this.ITEMS.upgrades, 'upgrade');
+        },
+
+        buildDraftUI: function() {
+            if(!this.state) return;
+            const draftedContainer = this.dom['list-draft-players'];
+            const availContainer = this.dom['list-available-players'];
+            if(!draftedContainer || !availContainer) return;
+
+            draftedContainer.innerHTML = '';
+            if(!this.state.draftedPlayers) this.state.draftedPlayers = {};
+            
+            let draftCount = 0;
+            this.DRAFT_PLAYERS.forEach(p => {
+                if(this.state.draftedPlayers[p.id]) {
+                    const div = document.createElement('div');
+                    div.className = 'player-card drafted';
+                    const morale = this.state.draftedPlayers[p.id].morale || 0.5;
+                    div.innerHTML = `
+                        <div class="player-info">
+                            <div class="player-name">${p.name}</div>
+                            <div class="player-stats">+${p.baseYps} YPS (Base)</div>
+                            <div class="player-morale">Morale: ${(morale*100).toFixed(0)}%</div>
+                        </div>
+                    `;
+                    draftedContainer.appendChild(div);
+                    draftCount++;
+                }
+            });
+            if(draftCount === 0) {
+                draftedContainer.innerHTML = '<div style="font-size:0.9rem; color:var(--muted); text-align:center; padding:10px;">No players drafted yet.</div>';
+            }
+
+            availContainer.innerHTML = '';
+            this.DRAFT_PLAYERS.forEach(p => {
+                if(!this.state.draftedPlayers[p.id]) {
+                    const div = document.createElement('div');
+                    div.className = 'player-card';
+                    div.innerHTML = `
+                        <div class="player-info">
+                            <div class="player-name">${p.name}</div>
+                            <div class="player-stats">+${p.baseYps} YPS | Risk Bonus: ${p.riskBonus*100}%</div>
+                        </div>
+                        <div>
+                            <div class="player-cost" style="font-size:0.8rem; color:var(--gold); margin-bottom:5px;">${this.formatNum(p.cost)}</div>
+                            <button class="player-action" onclick="Game.draftPlayer('${p.id}')">DRAFT</button>
+                        </div>
+                    `;
+                    availContainer.appendChild(div);
+                }
+            });
+        },
+
+        draftPlayer: function(id) {
+            const player = this.DRAFT_PLAYERS.find(p => p.id === id);
+            if(!player || !this.state) return;
+
+            if(this.state.yards >= player.cost) {
+                if(!this.state.draftedPlayers) this.state.draftedPlayers = {};
+                this.state.yards -= player.cost;
+                this.state.draftedPlayers[id] = { morale: 0.5 }; 
+                this.buildDraftUI();
+                this.updateUI();
+                this.showToast(`Drafted ${player.name}!`);
+            } else {
+                this.showToast("Not enough Yards to draft.");
+            }
+        },
+
+        buildStadiumUI: function() {
+            const container = this.dom['list-stadium'];
+            if(!container || !this.state) return;
+            container.innerHTML = '';
+            
+            if(this.state.stadiumLevel === undefined) this.state.stadiumLevel = 0;
+
+            this.STADIUM_LEVELS.forEach((s, index) => {
+                if(index > this.state.stadiumLevel) return; 
+
+                const isCurrent = index === this.state.stadiumLevel;
+                const isNext = index === this.state.stadiumLevel + 1;
+
+                const div = document.createElement('div');
+                if(isCurrent) {
+                    div.className = 'stadium-item upgraded';
+                    div.innerHTML = `
+                        <div class="stadium-info">
+                            <div class="stadium-name">${s.name}</div>
+                            <div class="stadium-desc">Current Stadium</div>
+                        </div>
+                        <div class="stadium-cost">✅</div>
+                    `;
+                } else if (isNext) {
+                    div.className = 'stadium-item';
+                    div.onclick = () => this.upgradeStadium(index);
+                    div.innerHTML = `
+                        <div class="stadium-info">
+                            <div class="stadium-name">${s.name}</div>
+                            <div class="stadium-desc">${s.desc}</div>
+                        </div>
+                        <div class="stadium-cost">${this.formatNum(s.cost)} Coins</div>
+                    `;
+                }
+                container.appendChild(div);
+            });
+        },
+
+        upgradeStadium: function(levelIndex) {
+            const nextLevel = this.STADIUM_LEVELS[levelIndex];
+            if(!this.state) return;
+            if(this.state.coins >= nextLevel.cost) {
+                this.state.coins -= nextLevel.cost;
+                this.state.stadiumLevel = levelIndex;
+                this.buildStadiumUI();
+                this.updateUI();
+                this.showToast(`Upgraded to ${nextLevel.name}!`);
+            } else {
+                this.showToast("Not enough Coins for Stadium upgrade.");
+            }
+        },
+
+        buildAchievements: function() {
+            const container = document.getElementById('list-achievements');
+            if(!container || !this.state) return;
+            container.innerHTML = '';
+            this.ACHIEVEMENTS.forEach(ach => {
+                const div = document.createElement('div');
+                div.className = 'ach-item';
+                div.id = `ach-${ach.id}`;
+                
+                const completed = this.state.completedAchievements && this.state.completedAchievements.includes(ach.id);
+                if (completed) div.classList.add('completed');
+
+                div.innerHTML = `
+                    <div class="item-left">
+                        <div class="item-name">${ach.name}</div>
+                        <div class="item-desc">${ach.desc}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="ach-reward">+${(ach.rewardMult*100).toFixed(0)}% & ${ach.coins}c</div>
+                        <div class="ach-check">${completed ? '✅' : ''}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        },
+
+        renderList: function(containerId, items, type) {
+            const c = this.dom[containerId];
+            if(!c || !this.state) return;
+            c.innerHTML = '';
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'shop-item';
+                div.id = `ui-${item.id}`;
+                
+                let costDisplay = Math.floor(item.cost * Math.pow(item.mult, this.state.owned[item.id]||0));
+                let descDisplay = item.desc;
+                if (item.isCoin) {
+                    descDisplay += " (Coins)";
+                }
+
+                div.innerHTML = `
+                    <div class="item-left">
+                        <div class="item-icon">${item.icon}</div>
+                        <div><div class="item-name">${item.name}</div><div class="item-desc">${descDisplay}</div></div>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="item-cost" id="cost-${item.id}">${this.formatNum(costDisplay)}</div>
+                        <div class="item-owned" id="own-${item.id}">${this.state.owned[item.id]||0}</div>
+                    </div>
+                `;
+                div.onclick = () => this.buyItem(item.id);
+                c.appendChild(div);
+            });
+        },
+
+        buyItem: function(id) {
+            let item = this.ITEMS.upgrades.find(i=>i.id===id);
+            if(!item || !this.state) return;
+            
+            const currentOwned = this.state.owned[id] || 0;
+            const cost = Math.floor(item.cost * Math.pow(item.mult, currentOwned));
+            
+            if(this.state.yards >= cost) {
+                this.state.yards -= cost;
+                this.state.owned[id] = currentOwned + 1;
+                this.updateUI();
+            }
+        },
+
+        getMult: function() {
+            if(!this.state) return 1;
+            let m = this.ERAS[this.state.currentEra].mult;
+            m *= 1 + (this.state.eraPoints * 0.1);
+            m *= 1 + (this.state.legacyPoints * 0.05);
+            
+            if (this.state.completedAchievements) {
+                this.state.completedAchievements.forEach(achId => {
+                    const ach = this.ACHIEVEMENTS.find(a => a.id === achId);
+                    if (ach) m *= (1 + ach.rewardMult);
+                });
+            }
+
+            const now = Date.now();
+            this.state.activeEffects = this.state.activeEffects.filter(e => e.endTime > now);
+            this.state.activeEffects.forEach(e => m *= (1 + e.mult));
+            return m;
+        },
+
+        getClickPower: function() {
+            if(!this.state) return 1;
+            let base = 1;
+            this.ITEMS.upgrades.forEach(u => {
+                if(!u.isCoin) base += u.effect * (this.state.owned[u.id]||0);
+            });
+            
+            const stadium = this.STADIUM_LEVELS[this.state.stadiumLevel || 0];
+            if(stadium) {
+                base *= (1 + stadium.clickBonus);
+            }
+
+            return base * this.getMult() * this.state.comboMult;
+        },
+
+        getYPS: function() {
+            if(!this.state) return 0;
+            let total = 0;
+            
+            if(this.state.draftedPlayers) {
+                this.DRAFT_PLAYERS.forEach(p => {
+                    if(this.state.draftedPlayers[p.id]) {
+                        const morale = this.state.draftedPlayers[p.id].morale || 0.5;
+                        total += p.baseYps * morale;
+                    }
+                });
+            }
+            
+            return total * this.getMult();
+        },
+        
+        getCoinsPerSec: function() {
+            if(!this.state) return 0;
+            let total = 0;
+            this.ITEMS.upgrades.forEach(u => {
+                if(u.isCoin) total += u.effect * (this.state.owned[u.id]||0);
+            });
+            total += Math.floor(this.state.totalYards / 1000) * 0.1;
+            return total;
+        },
+
+        addEffect: function(id, dur, mult) {
+            if(!this.state) return;
+            this.state.activeEffects = this.state.activeEffects.filter(e => e.id !== id);
+            this.state.activeEffects.push({ id, mult, endTime: Date.now() + (dur*1000) });
+        },
+
+        modifyMorale: function(target, amount) {
+            if(!this.state) return;
+            if(!this.state.draftedPlayers) return;
+            
+            if(target === 'ALL') {
+                for(let key in this.state.draftedPlayers) {
+                    this.state.draftedPlayers[key].morale += amount;
+                    this.state.draftedPlayers[key].morale = Math.max(0.1, Math.min(1.0, this.state.draftedPlayers[key].morale));
+                }
+            } else {
+                this.DRAFT_PLAYERS.forEach(p => {
+                    if(p.pos === target && this.state.draftedPlayers[p.id]) {
+                        this.state.draftedPlayers[p.id].morale += amount;
+                        this.state.draftedPlayers[p.id].morale = Math.max(0.1, Math.min(1.0, this.state.draftedPlayers[p.id].morale));
+                    }
+                });
+            }
+            this.buildDraftUI(); 
+        },
+
+        checkAchievements: function() {
+            if(!this.state) return;
+            let changed = false;
+            this.ACHIEVEMENTS.forEach(ach => {
+                if (!this.state.completedAchievements) this.state.completedAchievements = [];
+                if (!this.state.completedAchievements.includes(ach.id)) {
+                    if (ach.check(this.state)) {
+                        this.state.completedAchievements.push(ach.id);
+                        this.state.coins += ach.coins;
+                        this.showToast(`Achievement: ${ach.name}! +${ach.coins} Coins`);
+                        changed = true;
+                    }
+                }
+            });
+            if (changed) this.buildAchievements();
+        },
+
+        checkEraMilestones: function() {
+            if(!this.state) return;
+            const era = this.ERAS[this.state.currentEra];
+            const coinKey = `coins_era_${this.state.currentEra}`;
+            if (era.coins > 0 && !this.state[coinKey]) {
+                this.state[coinKey] = true;
+                this.state.coins += era.coins;
+                this.showToast(`Era Bonus: +${era.coins} Coins!`);
+            }
+        },
+
+        scheduleNextEvent: function() {
+            if (this.eventInterval) clearInterval(this.eventInterval);
+            this.eventInterval = null;
+            const randomInterval = Math.floor(Math.random() * (120000 - 45000 + 1)) + 45000;
+            this.nextEventTime = Date.now() + randomInterval;
+            this.eventInterval = setInterval(() => this.updateEventTimer(), 1000);
+        },
+
+        updateEventTimer: function() {
+            if (!this.eventTimerDisplay) return;
+            const now = Date.now();
+            const timeLeft = this.nextEventTime - now;
+            if (timeLeft <= 0) {
+                this.triggerRandomEvent();
+                this.scheduleNextEvent();
+            } else {
+                const seconds = Math.ceil(timeLeft / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                this.eventTimerDisplay.textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
+                if (timeLeft < 5000) this.eventTimerDisplay.classList.add('urgent');
+                else this.eventTimerDisplay.classList.remove('urgent');
+            }
+        },
+
+        triggerRandomEvent: function() {
+            if (this.dom['event-modal'].classList.contains('active')) return;
+            const ev = this.EVENTS[Math.floor(Math.random() * this.EVENTS.length)];
+            if(this.state) this.state.totalEvents++;
+            this.dom['event-desc'].innerText = ev.desc;
+            const choices = this.dom['event-choices'];
+            choices.innerHTML = '';
+            ev.choices.forEach(ch => {
+                const btn = document.createElement('button');
+                btn.className = 'modal-btn primary';
+                btn.innerText = ch.text;
+                btn.onclick = () => { 
+                    ch.action(); 
+                    this.dom['event-modal'].classList.remove('active'); 
+                    this.updateUI();
+                    this.buildDraftUI(); 
+                };
+                choices.appendChild(btn);
+            });
+            this.dom['event-modal'].classList.add('active');
+        },
+
+        startNewsTicker: function() {
+            const ticker = this.dom['ticker-content'];
+            if(!ticker) return;
+            const newsItems = [];
+            for(let i=0; i<5; i++) {
+                newsItems.push(this.NEWS_MENUS[Math.floor(Math.random() * this.NEWS_MENUS.length)]);
+            }
+            ticker.innerHTML = newsItems.map(n => `<span>${n}</span>`).join('');
+        },
+
+        handleClick: function(e) {
+            if(!this.state) return;
+            const now = Date.now();
+            if(now - this.state.lastClickTime < 1000) {
+                this.state.comboCount++;
+                this.state.comboMult = Math.min(1 + (this.state.comboCount * 0.05), 2.0);
+            } else {
+                this.state.comboCount = 1;
+                this.state.comboMult = 1.05;
+            }
+            this.state.lastClickTime = now;
+
+            const power = this.getClickPower();
+            
+            if(this.currentMode === 'risky') {
+                const gain = power * 3;
+                if(Math.random() < 0.2) {
+                    const loss = this.state.yards * 0.1;
+                    this.state.yards -= loss;
+                    if(this.state.yards < 0) this.state.yards = 0;
+                    this.state.totalFumbles++;
+                    this.spawnFloat(e.clientX, e.clientY, `FUMBLE -${this.formatNum(loss)}`, true);
+                    this.triggerScreenFlash();
+                } else {
+                    this.state.yards += gain;
+                    this.state.totalYards += gain;
+                    this.spawnFloat(e.clientX, e.clientY, `+${this.formatNum(gain)}`, false);
+                }
+            } else {
+                this.state.yards += power;
+                this.state.totalYards += power;
+                this.spawnFloat(e.clientX, e.clientY, `+${this.formatNum(power)}`, false);
+            }
+
+            this.state.totalClicks++;
+            this.checkEras();
+            this.checkAchievements();
+            this.checkEraMilestones();
+            this.updateUI();
+        },
+
+        triggerScreenFlash: function() {
+            const flash = document.getElementById('screen-flash');
+            flash.classList.remove('flash-red');
+            void flash.offsetWidth;
+            flash.classList.add('flash-red');
+        },
+
+        rebirth: function() {
+            if(!this.state) return;
+            const era = this.ERAS[this.state.currentEra];
+            if(this.state.totalYards < era.rebirthReq) return;
+            const gain = Math.floor(this.state.totalYards / 10000);
+            if(confirm(`Rebirth for ${gain} Era Points?`)) {
+                this.state.eraPoints += gain;
+                this.state.yards = 0;
+                this.state.owned = {};
+                this.state.currentEra++;
+                this.state.activeEffects = [];
+                this.state.comboCount = 0;
+                this.state.comboMult = 1;
+                this.state.draftedPlayers = {}; 
+                this.state.stadiumLevel = 0; 
+                this.saveGame();
+                this.updateUI();
+                this.buildDraftUI();
+                this.buildStadiumUI();
+                this.showToast(`Reborn! +${gain} Era Points`);
+            }
+        },
+
+        prestige: function() {
+            if(!this.state) return;
+            if(this.state.totalYards < 1000000000) return;
+            const gain = Math.floor(this.state.totalYards / 100000000);
+            if(confirm(`Retire for ${gain} Legacy Points?\n(Requires 1B Total Yards)`)) {
+                this.state.legacyPoints += gain;
+                this.state.yards = 0;
+                this.state.totalYards = 0;
+                this.state.eraPoints = 0;
+                this.state.currentEra = 0;
+                this.state.owned = {};
+                this.state.totalClicks = 0;
+                this.state.totalFumbles = 0;
+                this.state.startTime = Date.now();
+                this.state.activeEffects = [];
+                this.state.leagueWon = false;
+                this.state.leagueScores = null;
+                this.state.draftedPlayers = {};
+                this.state.stadiumLevel = 0;
+                this.saveGame();
+                this.updateUI();
+                this.buildDraftUI();
+                this.buildStadiumUI();
+                this.initLeague();
+                this.showToast(`Retired! +${gain} Legacy Points`);
+            }
+        },
+
+        checkEras: function() {
+            if(!this.state) return;
+            let newEra = 0;
+            for(let i=0; i<this.ERAS.length; i++) {
+                if(this.state.totalYards >= this.ERAS[i].threshold) newEra = i;
+            }
+            this.state.currentEra = newEra;
+            
+            if(!this.state.leagueWon && this.state.totalYards > 100000) {
+                this.checkLeagueWin();
+            }
+        },
+
+        spawnFloat: function(x, y, text, isLoss) {
+            if(!this.state || !this.state.settings.particles) return;
+            const el = document.createElement('div');
+            el.className = `float-text ${isLoss ? 'loss' : ''}`;
+            el.innerText = text;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            document.body.appendChild(el);
+            setTimeout(()=>el.remove(), 1000);
+        },
+
+        showToast: function(msg, type='success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        },
+
+        updateUI: function() {
+            if(!this.state) return;
+            const now = Date.now();
+            if(now - this.state.lastClickTime > 1000) { this.state.comboMult = 1; this.state.comboCount = 0; }
+
+            this.dom['h-yards'].innerText = this.formatNum(this.state.yards);
+            this.dom['h-yps'].innerText = this.formatNum(this.getYPS());
+            this.dom['h-mult'].innerText = "x" + this.getMult().toFixed(2);
+            this.dom['h-coins'].innerText = this.formatNum(this.state.coins);
+            this.dom['display-power'].innerText = this.formatNum(this.getClickPower());
+            
+            this.dom['ov-combo'].innerText = "x" + this.state.comboMult.toFixed(1);
+            const comboPct = Math.max(0, 1 - ((now - this.state.lastClickTime)/1000)) * 100;
+            this.dom['combo-fill'].style.width = comboPct + '%';
+            this.dom['combo-text'].innerText = `Combo: x${this.state.comboMult.toFixed(2)}`;
+
+            const curEra = this.ERAS[this.state.currentEra];
+            const nextEra = this.ERAS[this.state.currentEra + 1];
+            this.dom['ov-era'].innerText = curEra.name;
+            if(nextEra) {
+                const progress = this.state.totalYards - curEra.threshold;
+                const range = nextEra.threshold - curEra.threshold;
+                const pct = Math.min(100, (progress/range)*100);
+                this.dom['prog-fill'].style.width = pct + '%';
+                this.dom['prog-pct'].innerText = pct.toFixed(0) + '%';
+                this.dom['prog-text'].innerText = `${this.formatNum(this.state.totalYards)} / ${this.formatNum(nextEra.threshold)}`;
+            } else {
+                this.dom['prog-fill'].style.width = '100%';
+                this.dom['prog-text'].innerText = 'MAX';
+            }
+
+            [...this.ITEMS.upgrades].forEach(item => {
+                const cost = Math.floor(item.cost * Math.pow(item.mult, this.state.owned[item.id]||0));
+                const el = document.getElementById(`ui-${item.id}`);
+                if(el) {
+                    el.className = `shop-item ${this.state.yards >= cost ? 'affordable' : 'not-affordable'}`;
+                    document.getElementById(`cost-${item.id}`).innerText = this.formatNum(cost);
+                    document.getElementById(`own-${item.id}`).innerText = this.state.owned[item.id]||0;
+                }
+            });
+
+            const elapsed = Math.floor((now - this.state.startTime)/1000);
+            this.dom['stat-clicks'].innerText = this.state.totalClicks;
+            this.dom['stat-time'].innerText = this.formatTime(elapsed);
+            this.dom['stat-fumbles'].innerText = this.state.totalFumbles;
+            this.dom['stat-events'].innerText = this.state.totalEvents;
+            this.dom['stat-total-yards'].innerText = this.formatNum(this.state.totalYards);
+            this.dom
